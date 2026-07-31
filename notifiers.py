@@ -16,18 +16,28 @@ import requests
 TIMEOUT = 20
 
 
+def env(name: str, default: str = "") -> str:
+    """Read an env var, treating empty as missing.
+
+    GitHub Actions sets `FOO: ${{ secrets.FOO }}` to an empty string when the
+    secret doesn't exist, rather than leaving it unset. os.environ.get's
+    default only applies to absent keys, so an unconfigured secret would slip
+    through as "" and blow up on int(""). Anything falsy falls back here.
+    """
+    return (os.environ.get(name) or default).strip()
+
+
 def _log(channel: str, ok: bool, detail: str = "") -> bool:
-    status = "sent" if ok else "FAILED"
+    status = "sent" if ok else "skipped"
     print(f"  [{channel}] {status}{(' - ' + detail) if detail else ''}")
     return ok
 
 
 def send_discord(post: dict) -> bool:
-    url = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
+    url = env("DISCORD_WEBHOOK_URL")
     if not url:
-        return _log("discord", False, "no webhook configured, skipped")
+        return _log("discord", False, "not configured")
 
-    # Discord embed description cap is 4096; keep well under it.
     body = post["body"][:1500] or "(no text content)"
     payload = {
         "content": f"New post matching **{', '.join(post['matched'])}**",
@@ -46,17 +56,15 @@ def send_discord(post: dict) -> bool:
         r.raise_for_status()
         return _log("discord", True)
     except Exception as e:
-        return _log("discord", False, str(e))
+        return _log("discord", False, f"ERROR: {e}")
 
 
 def send_telegram(post: dict) -> bool:
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    token = env("TELEGRAM_BOT_TOKEN")
+    chat_id = env("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
-        return _log("telegram", False, "no bot token/chat id configured, skipped")
+        return _log("telegram", False, "not configured")
 
-    # Plain text on purpose: no parse_mode means no escaping bugs when a post
-    # contains _ * [ ] characters. Telegram auto-links bare URLs anyway.
     text = (
         f"New post matching: {', '.join(post['matched'])}\n\n"
         f"{post['title']}\n\n"
@@ -76,17 +84,18 @@ def send_telegram(post: dict) -> bool:
         r.raise_for_status()
         return _log("telegram", True)
     except Exception as e:
-        return _log("telegram", False, str(e))
+        return _log("telegram", False, f"ERROR: {e}")
 
 
 def send_email(post: dict) -> bool:
-    host = os.environ.get("SMTP_HOST", "smtp.gmail.com").strip()
-    port = int(os.environ.get("SMTP_PORT", "465"))
-    user = os.environ.get("SMTP_USER", "").strip()
-    password = os.environ.get("SMTP_PASSWORD", "").strip()
-    to_addr = os.environ.get("EMAIL_TO", "").strip() or user
+    user = env("SMTP_USER")
+    password = env("SMTP_PASSWORD")
     if not user or not password:
-        return _log("email", False, "no SMTP credentials configured, skipped")
+        return _log("email", False, "not configured")
+
+    host = env("SMTP_HOST", "smtp.gmail.com")
+    port = int(env("SMTP_PORT", "465"))
+    to_addr = env("EMAIL_TO") or user
 
     msg = EmailMessage()
     msg["Subject"] = f"[FB Monitor] {post['title'][:120] or 'New post'}"
@@ -106,7 +115,7 @@ def send_email(post: dict) -> bool:
             s.send_message(msg)
         return _log("email", True)
     except Exception as e:
-        return _log("email", False, str(e))
+        return _log("email", False, f"ERROR: {e}")
 
 
 def notify_all(post: dict) -> bool:
