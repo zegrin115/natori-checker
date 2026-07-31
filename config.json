@@ -1,0 +1,11 @@
+{
+  "_comment": "Keywords are matched against the post title + body. ASCII keywords use word-boundary matching (so 'natori' will NOT match 'natorious'). Non-ASCII keywords (Japanese, etc.) use plain substring matching, because word boundaries don't exist in CJK text.",
+  "keywords": [
+    "natori",
+    "なとり"
+  ],
+  "match_mode": "any",
+  "max_notifications_per_run": 10,
+  "state_file": "state/seen.json",
+  "state_max_entries": 500
+}
