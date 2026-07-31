@@ -1,1 +1,12 @@
-{"seen": [], "bootstrapped": true, "etag": null, "last_modified": null}
+{
+  "seen": [
+    "8a02d4d3a5e7cb9e26dcb7c70dd947dc",
+    "17883ae23f130afec774f64e1d54c512",
+    "9ab5ac5d6f84511c080142215d1a598f",
+    "10f33f0984bd9233f66854f2b31c7657",
+    "659b12ced9b9b9619b7fc56417c78da7"
+  ],
+  "bootstrapped": true,
+  "etag": "W/\"6972-MkW34VWMOxVSKbF/No87avjiB6M\"",
+  "last_modified": null
+}
